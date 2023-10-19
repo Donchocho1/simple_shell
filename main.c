@@ -8,7 +8,7 @@
 void ge_term(void)
 {
 	if (isatty(STDIN_FILENO))
-		ge_puts("$ ");
+		ge_puts("#cisfun$ ");
 }
 /**
  * main - function to execute the shell tasks
