@@ -1,87 +1,137 @@
 #include "main.h"
 
 /**
- * ge_buildin_check - function that check if the command is a buildin
- * @strg: pointer to argument array
+ * ge_execute - function to execute
+ * @strg: string to execute
  *
- * Return: pointer to the function which take arg or return noting
  */
-void(*ge_buildin_check(char **strg))(char **strg)
+void ge_execute(char **strg)
 {
-	int i = 0, j = 0;
+	pid_t child_pid;
+	int status;
 
-	GeBuildin T[] = {
-		{"exit", ge_exit},
-		{"env", ge_environ},
-		{"setenv", ge_setenviron},
-		{"unsetenv", ge_unsetenv},
-		{NULL, NULL}
-	};
-	while (T[i].name)
+	if (!strg || !strg[0])
+		return;
+	child_pid = fork();
+	if (child_pid == -1)
 	{
-		while (T[i].name[j] == strg[0][j] && T[i].name[j] != '\0')
+		perror(ge_getenviron("-"));
+		exit(EXIT_FAILURE);
+	}
+	if (child_pid == 0)
+	{
+		execve(strg[0], strg, environ);
+		perror(strg[0]);
+		exit(EXIT_FAILURE);
+	}
+	wait(&status);
+}
+
+/**
+ * ge_splitString - function to split string and make it an array
+ * @strg: string to split
+ * @delim: the delimiter to use
+ *
+ * Return: array of pointer
+ */
+char **ge_splitString(char *strg, const char *delim)
+{
+	size_t wn = 0;
+	char *token, *copy, **array = NULL;
+
+	if (strg == NULL || delim == NULL)
+		return (NULL);
+	copy = ge_strdup(strg);
+	if (copy == NULL)
+	{
+		perror(ge_getenviron("-"));
+		return (NULL);
+	}
+	token = strtok(copy, delim);
+	while (token)
+	{
+		array = ge_realloc(array, sizeof(char *) * wn, sizeof(char *) * (wn + 1));
+		if (array == NULL)
 		{
-			if (T[i].name[j] == '\0')
-				return (T[i].func);
-			j++;
+			perror(ge_getenviron("-"));
+			free(copy);
+			return (NULL);
 		}
+		array[wn] = ge_strdup(token);
+		if (array[wn] == NULL)
+		{
+			perror(ge_getenviron("-"));
+			free(copy);
+			return (NULL);
+		}
+		wn++;
+		token = strtok(NULL, delim);
+	}
+	free(copy);
+	return (array);
+}
+/**
+ * ge_freestrg - function that free array of pointer
+ * @strg: array of pointer
+ *
+ * Return: void
+ */
+void ge_freestrg(char **strg)
+{
+	int i = 0;
+
+	if (strg == NULL)
+	{
+		return;
+	}
+	while (strg[i] != NULL)
+	{
+		free(strg[i]);
 		i++;
 	}
-	return (NULL);
+	free(strg);
 }
-/**
- * ge_getenviron - function that get the value of global variable
- * @name: name of the variable
- *
- * Return: string value
- */
-char *ge_getenviron(const char *name)
-{
-	int i, j;
 
-	if (name == NULL)
+/**
+ * ge_realloc - function to reallocate memory
+ * @strgptr: pointer to previous memory
+ * @oldsize: size of old pointer
+ * @newsize: size of new pointer
+ *
+ * Return: new size pointer
+ */
+void *ge_realloc(void *strgptr, size_t oldsize, size_t newsize)
+{
+	char *oldptr = (char *)strgptr, *newptr;
+	size_t i;
+
+	if (newsize == 0)
+	{
+		free(strgptr);
 		return (NULL);
-	for (i = 0; environ[i] != NULL; i++)
-	{
-		for (j = 0; name[j] != '\0' && name[j] == environ[i][j]; j++)
-			;
-		if (name[j] == '\0' && environ[i][j] == '=')
-			return (environ[i] + j + 1);
 	}
-	return (NULL);
-}
-
-/**
- * ge_handleEOF - function that handle end of File
- * @lenn: value of what is in the getline function
- * @buf: the buffer
- *
- * Return: void
- */
-void ge_handleEOF(int lenn, char *buf)
-{
-	if (lenn == -1)
+	if (strgptr == NULL)
+		return (malloc(newsize));
+	if (newsize == oldsize)
+		return (strgptr);
+	newptr = malloc(newsize);
+	if (newptr == NULL)
 	{
-		if (isatty(STDIN_FILENO))
-		{
-			ge_puts("\n");
-			free(buf);
-		}
-		exit(0);
+		free(strgptr);
+		return (NULL);
 	}
-}
-
-/**
- * ge_signal_c - function that handle signal
- * @sig_num: number of signal
- *
- * Return: void
- */
-void ge_signal_c(int sig_num)
-{
-	if (sig_num == SIGINT)
+	if (newsize > oldsize)
 	{
-		ge_puts("\n#cicfun$ ");
-		fflush(stdout);
+		for (i = 0; i < oldsize; i++)
+			newptr[i] = oldptr[i];
+		for (i = oldsize; i < newsize; i++)
+			newptr[i] = '\0';
 	}
+	else
+	{
+		for (i = 0; i < newsize; i++)
+			newptr[i] = oldptr[i];
+	}
+	free(strgptr);
+	return (newptr);
 }

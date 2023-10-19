@@ -81,7 +81,7 @@ void ge_signal_c(int sig_num)
 {
 	if (sig_num == SIGINT)
 	{
-		ge_puts("\n#cicfun$ ");
+		ge_puts("\n$ ");
 		fflush(stdout);
 	}
 }

@@ -1,87 +1,99 @@
 #include "main.h"
 
 /**
- * ge_buildin_check - function that check if the command is a buildin
- * @strg: pointer to argument array
+ * ge_lnpath - function that create a linked list of path
+ * @spath: path value
  *
- * Return: pointer to the function which take arg or return noting
+ * Return: pointer to created linkedlist
  */
-void(*ge_buildin_check(char **strg))(char **strg)
+list_path *ge_lnpath(char *spath)
 {
-	int i = 0, j = 0;
+	list_path *head = NULL;
+	char *cpath, *token;
 
-	GeBuildin T[] = {
-		{"exit", ge_exit},
-		{"env", ge_environ},
-		{"setenv", ge_setenviron},
-		{"unsetenv", ge_unsetenv},
-		{NULL, NULL}
-	};
-	while (T[i].name)
-	{
-		while (T[i].name[j] == strg[0][j] && T[i].name[j] != '\0')
-		{
-			if (T[i].name[j] == '\0')
-				return (T[i].func);
-			j++;
-		}
-		i++;
-	}
-	return (NULL);
-}
-/**
- * ge_getenviron - function that get the value of global variable
- * @name: name of the variable
- *
- * Return: string value
- */
-char *ge_getenviron(const char *name)
-{
-	int i, j;
-
-	if (name == NULL)
+	if (spath == NULL)
 		return (NULL);
-	for (i = 0; environ[i] != NULL; i++)
+	cpath = ge_strdup(spath);
+	if (cpath == NULL)
+		return (NULL);
+	token = strtok(cpath, ":");
+	while (token != NULL)
 	{
-		for (j = 0; name[j] != '\0' && name[j] == environ[i][j]; j++)
-			;
-		if (name[j] == '\0' && environ[i][j] == '=')
-			return (environ[i] + j + 1);
+		head = ge_add_node(&head, token);
+		token = strtok(NULL, ":");
+	}
+	free(cpath);
+	return (head);
+}
+
+/**
+ * ge_add_node - function that add a new node at the end of list
+ * @head: pointer to the linked
+ * @dir: pointer to the string
+ *
+ * Return: address of the new node
+ */
+list_path *ge_add_node(list_path **head, char *dir)
+{
+	list_path *new_node = malloc(sizeof(list_path));
+	list_path *temp;
+
+	if (!new_node || !dir)
+		return (NULL);
+	new_node->dir = ge_strdup(dir);
+	new_node->po = NULL;
+	if (!*head)
+		*head = new_node;
+	else
+	{
+		temp = *head;
+		while (temp->po)
+			temp = temp->po;
+		temp->po = new_node;
+	}
+	return (*head);
+}
+
+/**
+ * ge_freelist - function that free the listpath
+ * @ptolink: pointing to linked list
+ *
+ * Return: void
+ */
+void ge_freelist(list_path *ptolink)
+{
+	list_path *cur = ptolink;
+	list_path *temp;
+
+	while (cur)
+	{
+		temp = cur;
+		cur = cur->po;
+		free(temp->dir);
+		free(ptolink);
+	}
+}
+
+/**
+ * ge_pathname - function that find the pathname of filename
+ * @filename: name of the file to find the path
+ * @head: start of linked list
+ *
+ * Return: the pathname of filename or NULL
+ */
+char *ge_pathname(char *filename, list_path *head)
+{
+	struct stat st;
+	char *full_path;
+	list_path *cur_dir = head;
+
+	while (cur_dir)
+	{
+		full_path = ge_concat_str(cur_dir->dir, "/", filename);
+		if (stat(full_path, &st) == 0)
+			return (full_path);
+		free(full_path);
+		cur_dir = cur_dir->po;
 	}
 	return (NULL);
-}
-
-/**
- * ge_handleEOF - function that handle end of File
- * @lenn: value of what is in the getline function
- * @buf: the buffer
- *
- * Return: void
- */
-void ge_handleEOF(int lenn, char *buf)
-{
-	if (lenn == -1)
-	{
-		if (isatty(STDIN_FILENO))
-		{
-			ge_puts("\n");
-			free(buf);
-		}
-		exit(0);
-	}
-}
-
-/**
- * ge_signal_c - function that handle signal
- * @sig_num: number of signal
- *
- * Return: void
- */
-void ge_signal_c(int sig_num)
-{
-	if (sig_num == SIGINT)
-	{
-		ge_puts("\n#cicfun$ ");
-		fflush(stdout);
-	}
 }
