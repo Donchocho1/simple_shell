@@ -26,20 +26,27 @@ void ge_exit(char **ards)
 {
 	int status = 0, i;
 
-	if (ards[1])
+	if (ards[1] != NULL)
 	{
 		status = ge_atoi(ards[1]);
-		if (status < 0)
+		i = 0;
+		while (ards[1][i] != '\0')
 		{
-			status = 2;
+			if (ards[1][i] < '0' ||  ards[1][i] >  '9')
+			{
+				perror("Error: Invalid status code");
+				return;
+			}
+			i++;
 		}
 	}
 
-	for (i = 0; ards[i]; i++)
+	if (status < 0)
 	{
-		free(ards[i]);
+		perror("Error: Negative status code not allowed");
+		status = 2;
 	}
-	free(ards);
+	ge_freestrg(ards);
 	exit(status);
 }
 
